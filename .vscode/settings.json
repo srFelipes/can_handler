@@ -1,0 +1,10 @@
+{
+    "files.associations": {
+        "can.h": "c",
+        "socket.h": "c",
+        "iostream": "cpp",
+        "cstring": "cpp",
+        "string": "cpp",
+        "raw.h": "c"
+    }
+}
