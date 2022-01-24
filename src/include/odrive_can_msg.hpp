@@ -57,4 +57,13 @@ namespace odrive_can_msg
         }
     }
 
+    uint8_t * to_master(can_frame input_frame){
+        //create a container for the output
+        uint8_t output_array[input_frame.can_dlc];
+        for (int i=0;i<input_frame.can_dlc;i++){
+            output_array[i]=input_frame.data[input_frame.can_dlc-i-1];
+        }
+        return output_array;
+    }
+
 }

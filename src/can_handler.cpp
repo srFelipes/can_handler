@@ -20,28 +20,38 @@ private:
 	struct ifreq ifr;
 
 public:
+	can_frame frame;
+	can_filter filter;
 	can_handler(std::string can_type); //parametrized constructor
 	can_handler();					   //default constructor
 	~can_handler();
-	int can_connect();
+	int can_connect(bool is_vcan0);
 	int can_write(can_frame frame);
-	int can_write_wait_answer();
+	int can_write_wait_answer(can_frame frame);
 	int can_listen();
+	void can_set_filter(can_filter filter);
+	void can_set_filter();
 };
 
 can_handler::can_handler(void)
 {
 	s = -1;
 }
-int can_handler::can_connect()
+int can_handler::can_connect(bool is_vcan0)
 {
 	if ((s = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0)
 	{
 		perror("Socket");
 		return 1;
 	}
-
-	strcpy(ifr.ifr_name, "vcan0");
+	if (is_vcan0)
+	{
+		strcpy(ifr.ifr_name, "vcan0");
+	}
+	else
+	{
+		strcpy(ifr.ifr_name, "can0");
+	}
 	ioctl(s, SIOCGIFINDEX, &ifr);
 
 	addr.can_family = AF_CAN;
@@ -74,9 +84,34 @@ int can_handler::can_write(can_frame frame)
 		return 1;
 	}
 	else
-	{
 		return 0;
+}
+int can_handler::can_listen()
+{
+	int nbytes;
+
+	nbytes = read(s, &frame, sizeof(struct can_frame));
+
+	if (nbytes < 0)
+	{
+		perror("Read");
+		return 1;
 	}
+	else
+		return 0;
+}
+int can_handler::can_write_wait_answer(can_frame frame)
+{
+	can_write(frame);
+	can_listen();
+}
+void can_handler::can_set_filter()
+{
+	setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER, &filter, sizeof(filter));
+}
+void can_handler::can_set_filter(can_filter filter)
+{
+	setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER, &filter, sizeof(filter));
 }
 
 int main()
@@ -89,22 +124,31 @@ int main()
  * bit 30	: remote transmission request flag (1 = rtr frame)
  * bit 31	: frame format flag (0 = standard 11 bit, 1 = extended 29 bit)
  */
-	// can_handler ch;
-	// ch.can_connect();
-	// can_frame toSend;
+	can_handler handler;
+	handler.can_connect(true);
+	handler.filter.can_id=0x69;
+	handler.filter.can_mask=CAN_SFF_MASK;
+	handler.can_set_filter();
+	while (true){
+		handler.can_listen();
+		for (int i=0;i<handler.frame.can_dlc;i++){
+			std::cout<<"byte number "<<i<<" is "<< std::hex<<static_cast<int>( handler.frame.data[i])<<std::endl;
+		}
+
+	}
 	// // toSend.can_id=0x29A;  //this is the identifier can_id = axis_id << 5 | cmd_id
 	// // toSend.can_dlc=1;
 	// // toSend.data[0]='f';
 	// ch.can_write(toSend);
 	// std::cout << "saludsfgd oreltewcita \n";
 	// return 1;
-	
+
 	// uint32_t axis_id=0x1;
 	// uint32_t cmd_id=0x5;
 	// uint32_t can_id=axis_id << 5 | cmd_id;
 
-	if (0b0){
-		std::cout<<"terminado2";
+	if (0b0)
+	{
+		std::cout << "terminado2";
 	}
-	
 }
